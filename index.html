@@ -258,12 +258,7 @@
       text-align: center;
       outline: none;
       padding: 1px 0;
-      -moz-appearance: textfield;
-      appearance: textfield;
     }
-
-    .time-num::-webkit-inner-spin-button,
-    .time-num::-webkit-outer-spin-button { display: none; }
 
     .time-num::placeholder { color: rgba(255,255,255,0.25); }
 
@@ -874,22 +869,23 @@
       const [hh, mm] = val ? val.split(":") : ["", ""];
       return `
         <div class="time-field" data-i="${i}" data-field="${field}">
-          <input class="time-num" type="number" min="0" max="23" placeholder="HH"
+          <input class="time-num" type="text" inputmode="numeric" placeholder="HH"
             value="${hh}" data-i="${i}" data-field="${field}" data-part="h"
-            inputmode="numeric" maxlength="2" />
+            data-max="23" maxlength="2" autocomplete="off" />
           <span class="time-colon">:</span>
-          <input class="time-num" type="number" min="0" max="59" placeholder="MM"
+          <input class="time-num" type="text" inputmode="numeric" placeholder="MM"
             value="${mm}" data-i="${i}" data-field="${field}" data-part="m"
-            inputmode="numeric" maxlength="2" />
+            data-max="59" maxlength="2" autocomplete="off" />
         </div>`;
     }
 
     function getTimeValue(i, field) {
       const row = slotInputsEl.querySelector(`.time-field[data-i="${i}"][data-field="${field}"]`);
       if (!row) return "";
-      const h = row.querySelector('[data-part="h"]').value.padStart(2, "0");
-      const m = row.querySelector('[data-part="m"]').value.padStart(2, "0");
-      return (h && m) ? `${h}:${m}` : "";
+      const hRaw = row.querySelector('[data-part="h"]').value.trim();
+      const mRaw = row.querySelector('[data-part="m"]').value.trim();
+      if (hRaw === "" || mRaw === "") return "";
+      return `${hRaw.padStart(2,"0")}:${mRaw.padStart(2,"0")}`;
     }
 
     function renderInputs() {
@@ -918,15 +914,27 @@
       });
 
       slotInputsEl.querySelectorAll(".time-num").forEach(el => {
+        // 숫자만 허용
         el.addEventListener("input", e => {
+          const raw = e.target.value.replace(/[^0-9]/g, "");
+          const max = +e.target.dataset.max;
+          let clamped = raw;
+          if (raw !== "" && +raw > max) clamped = String(max);
+          e.target.value = clamped;
           const { i, field } = e.target.dataset;
-          // clamp value
-          const max = e.target.dataset.part === "h" ? 23 : 59;
-          if (e.target.value !== "" && +e.target.value > max) e.target.value = max;
           studySlots[+i][field] = getTimeValue(+i, field);
-          // auto-jump to minutes after entering 2 digits for hour
-          if (e.target.dataset.part === "h" && String(e.target.value).length === 2) {
+          // 2자리 입력 완료 시 다음 필드로 자동 이동
+          if (e.target.dataset.part === "h" && clamped.length === 2) {
             e.target.closest(".time-field").querySelector('[data-part="m"]').focus();
+          }
+        });
+
+        // 블러 시 두 자리로 표시 (1 → 01)
+        el.addEventListener("blur", e => {
+          if (e.target.value !== "") {
+            e.target.value = e.target.value.padStart(2, "0");
+            const { i, field } = e.target.dataset;
+            studySlots[+i][field] = getTimeValue(+i, field);
           }
         });
       });
@@ -945,9 +953,15 @@
     });
 
     document.getElementById("btnStart").addEventListener("click", () => {
-      const valid = studySlots.filter(s => s.start && s.end && s.start < s.end);
+      // DOM에서 직접 읽어 blur 미발생 문제 방지
+      const parsed = studySlots.map((s, i) => ({
+        title: s.title,
+        start: getTimeValue(i, "start"),
+        end:   getTimeValue(i, "end"),
+      }));
+      const valid = parsed.filter(s => s.start && s.end && s.start < s.end);
       if (valid.length === 0) {
-        alert("유효한 공부 시간을 하나 이상 입력해주세요.");
+        alert("유효한 공부 시간을 하나 이상 입력해주세요.\n(시작 시간이 종료 시간보다 빨라야 합니다)");
         return;
       }
       valid.sort((a, b) => a.start.localeCompare(b.start));
