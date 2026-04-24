@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Time Table</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #020202;
+      --bg-deep: #050308;
+      --surface: rgba(255, 255, 255, 0.03);
+      --surface-strong: rgba(255, 255, 255, 0.05);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f5f2ff;
+      --muted: #b6accd;
+      --gold: #facc15;
+      --gold-soft: rgba(250, 204, 21, 0.18);
+      --violet: #a855f7;
+      --violet-soft: rgba(168, 85, 247, 0.2);
+      --pink: #ec4899;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 18%, rgba(168, 85, 247, 0.1), transparent 24%),
+        radial-gradient(circle at 86% 16%, rgba(250, 204, 21, 0.08), transparent 22%),
+        radial-gradient(circle at 76% 82%, rgba(236, 72, 153, 0.05), transparent 18%),
+        linear-gradient(160deg, #010101 0%, #050308 46%, #020103 100%);
+      background-attachment: fixed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      overflow-x: hidden;
+    }
+
+    body::before, body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      filter: blur(90px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.28;
+    }
+
+    body::before {
+      top: -80px;
+      left: -60px;
+      background: rgba(168, 85, 247, 0.14);
+    }
+
+    body::after {
+      right: -80px;
+      bottom: -100px;
+      background: rgba(250, 204, 21, 0.12);
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      width: min(1180px, 100%);
+      min-height: 640px;
+      padding: 30px;
+      border-radius: 28px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.018));
+      border: 1px solid var(--border);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.05),
+        0 0 0 1px rgba(255,255,255,0.02),
+        0 0 22px rgba(168,85,247,0.1),
+        0 0 38px rgba(250,204,21,0.08),
+        0 28px 90px rgba(0,0,0,0.62);
+      backdrop-filter: blur(18px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 28px;
+      overflow: hidden;
+    }
+
+    .app::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(250,204,21,0.5), rgba(168,85,247,0.52), rgba(255,255,255,0.05));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      opacity: 0.65;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand-block, .clock-wrap, .progress-shell, .slot {
+      background: linear-gradient(145deg, rgba(255,255,255,0.038), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.04),
+        0 0 16px rgba(168,85,247,0.05),
+        0 0 20px rgba(250,204,21,0.04);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand-block, .clock-wrap {
+      border-radius: 20px;
+      padding: 18px 20px;
+    }
+
+    .brand {
+      font-size: clamp(1.8rem, 3vw, 2.7rem);
+      font-weight: 800;
+      color: #fff7d6;
+      text-shadow: 0 0 14px rgba(250,204,21,0.14), 0 0 20px rgba(168,85,247,0.12);
+    }
+
+    .brand-sub {
+      margin-top: 6px;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    .clock-wrap {
+      min-width: 250px;
+      text-align: right;
+    }
+
+    .clock-label {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 8px;
+    }
+
+    .clock {
+      font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: #fffdf5;
+      text-shadow: 0 0 18px rgba(168,85,247,0.12);
+    }
+
+    /* ── Setup Panel ── */
+    .setup-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .setup-title {
+      font-size: 1.1rem;
+      color: var(--gold);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .slot-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .slot-row {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+
+    .slot-row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .slot-row-label {
+      font-size: 0.82rem;
+      color: var(--gold);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .slot-row-times {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-input {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.95rem;
+      padding: 7px 12px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .title-input::placeholder { color: rgba(255,255,255,0.25); }
+
+    .title-input:focus {
+      border-color: rgba(250,204,21,0.5);
+    }
+
+    .time-field {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 6px 10px;
+      transition: border-color 0.2s;
+    }
+
+    .time-field:focus-within {
+      border-color: rgba(250,204,21,0.55);
+    }
+
+    .time-num {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      width: 2ch;
+      text-align: center;
+      outline: none;
+      padding: 1px 0;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    .time-num::-webkit-inner-spin-button,
+    .time-num::-webkit-outer-spin-button { display: none; }
+
+    .time-num::placeholder { color: rgba(255,255,255,0.25); }
+
+    .time-colon {
+      color: var(--muted);
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1;
+      user-select: none;
+      padding: 0 1px;
+    }
+
+    .time-sep {
+      color: var(--muted);
+      font-size: 1.1rem;
+    }
+
+    .btn-remove {
+      margin-left: auto;
+      background: rgba(236,72,153,0.12);
+      border: 1px solid rgba(236,72,153,0.25);
+      border-radius: 8px;
+      color: #ec4899;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 4px 9px;
+      transition: background 0.2s;
+    }
+
+    .btn-remove:hover {
+      background: rgba(236,72,153,0.22);
+    }
+
+    .btn-add {
+      background: rgba(250,204,21,0.1);
+      border: 1px solid rgba(250,204,21,0.3);
+      border-radius: 12px;
+      color: var(--gold);
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 9px 22px;
+      transition: background 0.2s;
+    }
+
+    .btn-add:hover {
+      background: rgba(250,204,21,0.18);
+    }
+
+    .btn-start {
+      background: linear-gradient(135deg, rgba(250,204,21,0.22), rgba(168,85,247,0.22));
+      border: 1px solid rgba(250,204,21,0.4);
+      border-radius: 14px;
+      color: #fff9ef;
+      cursor: pointer;
+      font-size: 1.05rem;
+      font-weight: 800;
+      padding: 12px 36px;
+      letter-spacing: 0.04em;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 0 18px rgba(250,204,21,0.1);
+    }
+
+    .btn-start:hover {
+      background: linear-gradient(135deg, rgba(250,204,21,0.32), rgba(168,85,247,0.32));
+      box-shadow: 0 0 24px rgba(250,204,21,0.18);
+    }
+
+    .setup-hint {
+      font-size: 0.83rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* ── Timer Panel ── */
+    .timer-panel {
+      display: none;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .timer-panel.active {
+      display: flex;
+    }
+
+    .headline {
+      display: grid;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .phase-kicker {
+      font-size: 0.9rem;
+      color: rgba(250,204,21,0.85);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .phase-name {
+      font-size: clamp(2.1rem, 4.1vw, 3.5rem);
+      font-weight: 800;
+      color: #fffaf0;
+      text-shadow: 0 0 16px rgba(250,204,21,0.12), 0 0 24px rgba(168,85,247,0.1);
+      line-height: 1.1;
+    }
+
+    .phase-time {
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .progress-shell {
+      width: min(860px, 100%);
+      margin: 0 auto;
+      padding: 20px;
+      border-radius: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-shell::before {
+      content: "";
+      position: absolute;
+      inset: -40% auto auto -10%;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(168,85,247,0.22), transparent 68%);
+      pointer-events: none;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 40px;
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: inset 0 1px 14px rgba(0,0,0,0.46);
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #facc15, #a855f7);
+      box-shadow: 0 0 18px rgba(250,204,21,0.14), 0 0 28px rgba(168,85,247,0.12);
+      transition: width 0.9s linear, background 0.35s ease, box-shadow 0.35s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-bar::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.26) 45%, transparent 85%);
+      transform: translateX(-100%);
+      animation: shimmer 3s linear infinite;
+    }
+
+    .progress-meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .meta-card {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.06);
+      min-height: 70px;
+    }
+
+    .meta-label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .meta-value {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff9ef;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .schedule {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .slot {
+      border-radius: 18px;
+      padding: 15px;
+      min-height: 108px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .slot::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 3px;
+      background: linear-gradient(180deg, rgba(250,204,21,0.8), rgba(168,85,247,0.8));
+      opacity: 0.65;
+    }
+
+    .slot.break-slot::before {
+      background: linear-gradient(180deg, rgba(192,132,252,0.8), rgba(250,204,21,0.8));
+    }
+
+    .slot.active {
+      transform: translateY(-2px);
+      border-color: rgba(250,204,21,0.44);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.05),
+        0 0 18px rgba(250,204,21,0.08),
+        0 0 22px rgba(168,85,247,0.1);
+      background: linear-gradient(145deg, rgba(250,204,21,0.07), rgba(168,85,247,0.08));
+    }
+
+    .slot-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff8dc;
+      margin-bottom: 8px;
+    }
+
+    .slot-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: rgba(250,204,21,0.15);
+      color: var(--gold);
+      letter-spacing: 0.04em;
+    }
+
+    .slot-badge.break-badge {
+      background: rgba(192,132,252,0.15);
+      color: #c084fc;
+    }
+
+    .slot-time {
+      font-size: 0.92rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.45;
+    }
+
+    .btn-reset {
+      align-self: center;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 7px 18px;
+      transition: background 0.2s;
+    }
+
+    .btn-reset:hover {
+      background: rgba(255,255,255,0.09);
+      color: #fff;
+    }
+
+    @keyframes shimmer {
+      from { transform: translateX(-100%); }
+      to   { transform: translateX(140%); }
+    }
+
+    /* ── Tablet ── */
+    @media (max-width: 860px) {
+      .schedule {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      }
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      body {
+        padding: 0;
+        align-items: stretch;
+        background-attachment: scroll;
+      }
+
+      .app {
+        min-height: 100dvh;
+        border-radius: 0;
+        padding: 16px 14px 28px;
+        gap: 16px;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+        box-shadow: none;
+      }
+
+      /* Topbar: brand left, clock right — side by side */
+      .topbar {
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      .brand-block {
+        flex: 1;
+        padding: 8px 12px;
+        border-radius: 14px;
+      }
+
+      .brand {
+        font-size: 1.35rem;
+      }
+
+      .brand-sub {
+        font-size: 0.72rem;
+        margin-top: 2px;
+      }
+
+      .clock-wrap {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 12px;
+        border-radius: 14px;
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .clock {
+        font-size: 1.3rem;
+      }
+
+      .clock-label {
+        font-size: 0.72rem;
+        margin-bottom: 3px;
+      }
+
+      /* Setup panel */
+      .setup-panel {
+        gap: 16px;
+      }
+
+      .setup-title {
+        font-size: 1rem;
+      }
+
+      .setup-hint {
+        font-size: 0.8rem;
+        padding: 0 4px;
+      }
+
+      .slot-inputs {
+        max-width: 100%;
+        gap: 10px;
+      }
+
+      .slot-row {
+        padding: 12px;
+        gap: 8px;
+        border-radius: 14px;
+      }
+
+      .slot-row-label {
+        font-size: 0.78rem;
+      }
+
+      .slot-row-times {
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .time-field {
+        padding: 8px 10px;
+      }
+
+      .time-num {
+        font-size: 1rem;
+        width: 2ch;
+      }
+
+      .title-input {
+        font-size: 0.9rem;
+        padding: 8px 10px;
+      }
+
+      .time-sep {
+        display: flex;
+        align-items: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+      }
+
+      .btn-remove {
+        margin-left: auto;
+        flex-shrink: 0;
+        font-size: 1rem;
+        padding: 5px 11px;
+        min-width: 34px;
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .btn-add {
+        width: 100%;
+        max-width: 100%;
+        padding: 13px 0;
+        font-size: 1rem;
+        border-radius: 14px;
+      }
+
+      .btn-start {
+        width: 100%;
+        max-width: 100%;
+        padding: 15px 0;
+        font-size: 1.05rem;
+        border-radius: 14px;
+      }
+
+      /* Timer panel */
+      .timer-panel {
+        gap: 16px;
+      }
+
+      .headline {
+        gap: 6px;
+      }
+
+      .phase-kicker {
+        font-size: 0.78rem;
+      }
+
+      .phase-name {
+        font-size: 2rem;
+      }
+
+      .phase-time {
+        font-size: 0.88rem;
+      }
+
+      .progress-shell {
+        width: 100%;
+        padding: 14px 12px;
+        border-radius: 18px;
+      }
+
+      .progress-track {
+        height: 34px;
+      }
+
+      .progress-meta {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .meta-card {
+        padding: 12px 12px;
+        min-height: 60px;
+        border-radius: 14px;
+      }
+
+      .meta-label {
+        font-size: 0.78rem;
+      }
+
+      .meta-value {
+        font-size: 1rem;
+      }
+
+      /* Schedule: 2 columns on mobile */
+      .schedule {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .slot {
+        min-height: 80px;
+        padding: 12px 10px 12px 14px;
+        border-radius: 14px;
+      }
+
+      .slot-name {
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+      }
+
+      .slot-badge {
+        font-size: 0.66rem;
+        padding: 2px 6px;
+        margin-bottom: 4px;
+      }
+
+      .slot-time {
+        font-size: 0.8rem;
+      }
+
+      .btn-reset {
+        width: 100%;
+        max-width: 100%;
+        padding: 13px 0;
+        font-size: 0.9rem;
+        border-radius: 12px;
+      }
+    }
+
+    /* ── Very small phones ── */
+    @media (max-width: 360px) {
+      .topbar { flex-direction: column; }
+      .clock-wrap { text-align: left; }
+      .schedule { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <section class="brand-block">
+        <div class="brand">TIME</div>
+        <div class="brand-sub">Study Time Table</div>
+      </section>
+      <section class="clock-wrap">
+        <div class="clock-label">현재 시간</div>
+        <div class="clock" id="currentTime">--:--:--</div>
+      </section>
+    </header>
+
+    <!-- Setup -->
+    <section class="setup-panel" id="setupPanel">
+      <div class="setup-title">공부 시간 설정</div>
+      <div class="setup-hint">공부 시간을 순서대로 추가하세요. 공부 시간 사이는 자동으로 쉬는 시간이 됩니다.</div>
+      <div class="slot-inputs" id="slotInputs"></div>
+      <button class="btn-add" id="btnAdd">+ 공부 시간 추가</button>
+      <button class="btn-start" id="btnStart">시작</button>
+    </section>
+
+    <!-- Timer -->
+    <section class="timer-panel" id="timerPanel">
+      <div class="headline">
+        <div class="phase-kicker">study time table</div>
+        <div class="phase-name" id="phaseName">대기 중</div>
+        <div class="phase-time" id="phaseTime"></div>
+      </div>
+
+      <div class="progress-shell">
+        <div class="progress-track">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-meta">
+          <div class="meta-card">
+            <div class="meta-label">진행률</div>
+            <div class="meta-value" id="progressLabel">0%</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">남은 시간</div>
+            <div class="meta-value" id="remainingLabel">00:00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="schedule" id="schedule"></div>
+      <button class="btn-reset" id="btnReset">← 다시 설정</button>
+    </section>
+  </main>
+
+  <script>
+    const STUDY_ACCENTS = [
+      { accent: "linear-gradient(90deg,#facc15,#a855f7)", glow: "0 0 24px rgba(250,204,21,0.24),0 0 36px rgba(168,85,247,0.2)" },
+      { accent: "linear-gradient(90deg,#fde047,#9333ea)",  glow: "0 0 24px rgba(253,224,71,0.22),0 0 36px rgba(147,51,234,0.2)" },
+      { accent: "linear-gradient(90deg,#eab308,#d946ef)",  glow: "0 0 24px rgba(234,179,8,0.24),0 0 36px rgba(217,70,239,0.2)" },
+      { accent: "linear-gradient(90deg,#f59e0b,#ec4899)",  glow: "0 0 24px rgba(245,158,11,0.22),0 0 36px rgba(236,72,153,0.18)" },
+    ];
+    const BREAK_ACCENT = { accent: "linear-gradient(90deg,#c084fc,#facc15)", glow: "0 0 24px rgba(192,132,252,0.2),0 0 36px rgba(250,204,21,0.18)" };
+
+    let schedule = [];
+    let timerInterval = null;
+
+    const currentTimeEl   = document.getElementById("currentTime");
+    const phaseNameEl     = document.getElementById("phaseName");
+    const phaseTimeEl     = document.getElementById("phaseTime");
+    const progressBarEl   = document.getElementById("progressBar");
+    const progressLabelEl = document.getElementById("progressLabel");
+    const remainingLabelEl= document.getElementById("remainingLabel");
+    const scheduleEl      = document.getElementById("schedule");
+    const setupPanel      = document.getElementById("setupPanel");
+    const timerPanel      = document.getElementById("timerPanel");
+    const slotInputsEl    = document.getElementById("slotInputs");
+
+    // ── Inputs ──
+    let studySlots = [{ title: "", start: "", end: "" }];
+
+    function makeTimeField(i, field) {
+      const val = studySlots[i][field];
+      const [hh, mm] = val ? val.split(":") : ["", ""];
+      return `
+        <div class="time-field" data-i="${i}" data-field="${field}">
+          <input class="time-num" type="number" min="0" max="23" placeholder="HH"
+            value="${hh}" data-i="${i}" data-field="${field}" data-part="h"
+            inputmode="numeric" maxlength="2" />
+          <span class="time-colon">:</span>
+          <input class="time-num" type="number" min="0" max="59" placeholder="MM"
+            value="${mm}" data-i="${i}" data-field="${field}" data-part="m"
+            inputmode="numeric" maxlength="2" />
+        </div>`;
+    }
+
+    function getTimeValue(i, field) {
+      const row = slotInputsEl.querySelector(`.time-field[data-i="${i}"][data-field="${field}"]`);
+      if (!row) return "";
+      const h = row.querySelector('[data-part="h"]').value.padStart(2, "0");
+      const m = row.querySelector('[data-part="m"]').value.padStart(2, "0");
+      return (h && m) ? `${h}:${m}` : "";
+    }
+
+    function renderInputs() {
+      slotInputsEl.innerHTML = studySlots.map((s, i) => `
+        <div class="slot-row">
+          <div class="slot-row-top">
+            <span class="slot-row-label">공부 ${i + 1}</span>
+            ${studySlots.length > 1
+              ? `<button class="btn-remove" data-i="${i}" title="삭제">×</button>`
+              : ""}
+          </div>
+          <input class="title-input" type="text" placeholder="무엇을 공부할지 입력 (선택)"
+            value="${s.title}" data-i="${i}" data-field="title" />
+          <div class="slot-row-times">
+            ${makeTimeField(i, "start")}
+            <span class="time-sep">~</span>
+            ${makeTimeField(i, "end")}
+          </div>
+        </div>
+      `).join("");
+
+      slotInputsEl.querySelectorAll(".title-input").forEach(el => {
+        el.addEventListener("input", e => {
+          studySlots[+e.target.dataset.i].title = e.target.value;
+        });
+      });
+
+      slotInputsEl.querySelectorAll(".time-num").forEach(el => {
+        el.addEventListener("input", e => {
+          const { i, field } = e.target.dataset;
+          // clamp value
+          const max = e.target.dataset.part === "h" ? 23 : 59;
+          if (e.target.value !== "" && +e.target.value > max) e.target.value = max;
+          studySlots[+i][field] = getTimeValue(+i, field);
+          // auto-jump to minutes after entering 2 digits for hour
+          if (e.target.dataset.part === "h" && String(e.target.value).length === 2) {
+            e.target.closest(".time-field").querySelector('[data-part="m"]').focus();
+          }
+        });
+      });
+
+      slotInputsEl.querySelectorAll(".btn-remove").forEach(el => {
+        el.addEventListener("click", e => {
+          studySlots.splice(+e.target.dataset.i, 1);
+          renderInputs();
+        });
+      });
+    }
+
+    document.getElementById("btnAdd").addEventListener("click", () => {
+      studySlots.push({ title: "", start: "", end: "" });
+      renderInputs();
+    });
+
+    document.getElementById("btnStart").addEventListener("click", () => {
+      const valid = studySlots.filter(s => s.start && s.end && s.start < s.end);
+      if (valid.length === 0) {
+        alert("유효한 공부 시간을 하나 이상 입력해주세요.");
+        return;
+      }
+      valid.sort((a, b) => a.start.localeCompare(b.start));
+      buildSchedule(valid);
+      setupPanel.style.display = "none";
+      timerPanel.classList.add("active");
+      startTimer();
+    });
+
+    document.getElementById("btnReset").addEventListener("click", () => {
+      clearInterval(timerInterval);
+      timerPanel.classList.remove("active");
+      setupPanel.style.display = "";
+    });
+
+    // ── Build schedule from study slots ──
+    function buildSchedule(studyList) {
+      schedule = [];
+      let studyIdx = 0;
+      for (let i = 0; i < studyList.length; i++) {
+        const a = STUDY_ACCENTS[studyIdx % STUDY_ACCENTS.length];
+        schedule.push({
+          key: `study-${i}`,
+          label: studyList[i].title ? studyList[i].title : `공부 ${i + 1}`,
+          type: "study",
+          start: studyList[i].start,
+          end:   studyList[i].end,
+          accent: a.accent,
+          glow:   a.glow,
+        });
+        studyIdx++;
+        // break between study slots
+        if (i < studyList.length - 1 && studyList[i].end < studyList[i + 1].start) {
+          schedule.push({
+            key: `break-${i}`,
+            label: "쉬는 시간",
+            type: "break",
+            start: studyList[i].end,
+            end:   studyList[i + 1].start,
+            accent: BREAK_ACCENT.accent,
+            glow:   BREAK_ACCENT.glow,
+          });
+        }
+      }
+
+      scheduleEl.innerHTML = schedule.map(slot => `
+        <article class="slot${slot.type === "break" ? " break-slot" : ""}" data-key="${slot.key}">
+          <div class="slot-badge${slot.type === "break" ? " break-badge" : ""}">${slot.type === "break" ? "휴식" : "학습"}</div>
+          <div class="slot-name">${slot.label}</div>
+          <div class="slot-time">${slot.start} ~ ${slot.end}</div>
+        </article>
+      `).join("");
+    }
+
+    // ── Timer ──
+    function toMinutes(t) {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    }
+
+    function formatCountdown(totalSeconds) {
+      const s = Math.max(0, Math.floor(totalSeconds));
+      return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+    }
+
+    function formatClock(date) {
+      return new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(date);
+    }
+
+    function startTimer() {
+      updateUi();
+      timerInterval = setInterval(updateUi, 1000);
+    }
+
+    function updateUi() {
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+      currentTimeEl.textContent = formatClock(now);
+
+      const active = schedule.find(slot =>
+        nowMinutes >= toMinutes(slot.start) && nowMinutes < toMinutes(slot.end)
+      );
+
+      document.querySelectorAll(".slot").forEach(el => el.classList.remove("active"));
+
+      if (!active) {
+        const next = schedule.find(slot => nowMinutes < toMinutes(slot.start));
+        progressBarEl.style.width = "0%";
+        progressLabelEl.textContent = "0%";
+        remainingLabelEl.textContent = "00:00";
+        if (next) {
+          phaseNameEl.textContent = `${next.label} 대기`;
+          phaseTimeEl.textContent = `${next.label} 시작: ${next.start}`;
+          progressBarEl.style.background = next.accent;
+        } else if (schedule.length > 0) {
+          phaseNameEl.textContent = "오늘 일정 종료";
+          phaseTimeEl.textContent = "모든 시간표가 끝났습니다.";
+          progressBarEl.style.background = "linear-gradient(90deg,#6b7280,#a855f7)";
+        }
+        return;
+      }
+
+      const start = toMinutes(active.start);
+      const end   = toMinutes(active.end);
+      const progress = Math.min(100, Math.max(0, ((nowMinutes - start) / (end - start)) * 100));
+      const remainingSeconds = (end - nowMinutes) * 60;
+
+      phaseNameEl.textContent = active.label;
+      phaseTimeEl.textContent = `${active.start} ~ ${active.end}`;
+      progressBarEl.style.width = `${progress}%`;
+      progressBarEl.style.background = active.accent;
+      progressBarEl.style.boxShadow = active.glow;
+      progressLabelEl.textContent = `${progress.toFixed(1)}%`;
+      remainingLabelEl.textContent = formatCountdown(remainingSeconds);
+
+      const card = document.querySelector(`[data-key="${active.key}"]`);
+      if (card) card.classList.add("active");
+    }
+
+    // clock even before timer starts
+    setInterval(() => { currentTimeEl.textContent = formatClock(new Date()); }, 1000);
+    currentTimeEl.textContent = formatClock(new Date());
+
+    renderInputs();
+  </script>
+</body>
+</html>
